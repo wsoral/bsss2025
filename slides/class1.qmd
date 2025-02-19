@@ -1,0 +1,399 @@
+---
+title: "Bayesian Statistics in Social Sciences"
+format:
+  revealjs:
+    theme: solarized
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+theme_set(theme_classic())
+```
+
+# About the Class
+
+## About Me
+
+-   **Instructor**: Wiktor Soral, PhD
+-   **Email**: wiktor.soral\@psych.uw.edu.pl
+-   **Office**: Room No. 96
+-   **Office Hours**: Thursdays, 1:45-3:00PM
+
+## Course Outline {.smaller}
+
+1.  Introduction to Bayesian Statistics: Bayes' theorem (20-Feb-25)
+2.  Introduction to Bayesian Statistics: Simple models and priors (27-Feb-25)
+3.  Using *brms* for Simple Models (06-Mar-25)
+4.  Analysis and Plotting of MCMC Draws (13-Mar-25)
+5.  Bayesian Linear Models: simple, multivariate, moderation, and mediation (20-Mar-25)
+6.  Bayesian Linear Models: Generalized and multilevel (27-Mar-25)
+7.  Model Comparison and Model Selection: Bayes factors and information criteria (03-Apr-25)
+8.  Final Exam (10-Apr-25)
+
+## Assessment Methods:
+
+-   Final Exam (10-Apr-25)
+
+-   Homework Assignments (6 assignments)
+
+-   **Final Score Calculation**:
+
+    -   60% × (homework assignments average) + 40% × (final exam score)
+
+-   To pass the course, the total score, as well as both the homework and exam scores, must be at least 50%.
+
+## Attendance rules
+
+-   Students are allowed to miss **one class** without an excuse. Missing more than one class without an excuse will result in failing the course.
+
+-   If a student misses more than one class with an excuse, they must complete additional tasks. The number of tasks will depend on how many classes were missed.
+
+## Course website
+
+[https://github.com/wsoral/bsss2023](https://github.com/wsoral/bsss2023){preview-link="true"}
+
+# Intro to Bayesian statistics
+
+## Bayesian vs. frequentist approach
+
+-   In the **frequentist (classical)** approach:
+    -   probability is defined by connection to countable events and their frequencies in very large samples
+    -   uncertainty is being premised on imaginary resampling of the data
+    -   parameters and models cannot be described by a distribution, only measurements can (**sampling distribution**)
+
+## Bayesian vs. frequentist approach
+
+-   In the **frequentist (classical)** approach:
+    -   $P(head) = 0.5$ - out of 100,000 tosses 50,000 were heads
+    -   with 10 tosses (understood as a single experiment) it is possible to obtain any number of heads from 0 to 10
+
+## Bayesian vs. frequentist approach
+
+```{r}
+0:10 %>% 
+  enframe() %>% 
+  mutate(prob = dbinom(value, size=10, prob=0.5)*10000) %>% 
+  ggplot(aes(value, prob))+
+  geom_segment(aes(x=value, xend=value, y=0, yend = prob), linewidth = 2)+
+  scale_x_continuous("Number of heads in 10 trials", breaks = 0:10)+
+  scale_y_continuous("Frequency")+
+  ggtitle("Frequency of a specific result of an experiment with 10,000 replicates")
+```
+
+## Bayesian vs. frequentist approach
+
+-   What about events that occur only once?
+    -   E.g., What is a probability that a next pandemic will occur this year?
+-   What about uncertainty that is not a result of variation in repeated measurements?
+
+## Bayesian vs. frequentist approach
+
+![McElreath (2015)](figures/saturn.png)
+
+## Bayesian vs. frequentist approach
+
+::: incremental
+The frequentist approach relies heavily on p-values and *null hypothesis significance testing (NHST)*
+
+-   What is a p-value?
+
+-   How to report p \< .05?
+
+-   "We claim there is a non-zero effect, while acknowledging that if scientists make claims using this methodological procedure, they will be misled, in the long run, at most 5% of the time, which we deem acceptable. We will, for the foreseeable future, and until new data or information emerges that proves us wrong, assume this claim is correct."
+:::
+
+## Bayesian vs. frequentist approach
+
+::: incremental
+Which of these is the correct interpretation of a (1 − $\alpha$) confidence interval?
+
+-   An interval that has a 1 - $\alpha$% chance of containing the true value of the parameter.
+-   An interval that over 1 - $\alpha$% of replications under identical conditions contains the true value of the parameter, on average.
+:::
+
+## Bayesian vs. frequentist approach
+
+Problems with NHST:
+
+-   p-value cutoffs are completely arbitrary
+-   biased against the null, because true null relationships are not very common
+-   the result of NHST is binary, so a tremendous amount of information about the model is lost
+
+## Bayesian vs. frequentist approach
+
+Inference:
+
+-   in frequentist approach probability is $P(known\ |\ unknown)$
+-   in Bayesian approach we aim to obtain $P(uknown\ |\ known)$
+
+## Bayes' theorem
+
+::: {.absolute top="40%" left="15%"}
+$$Pr(A|B) = \frac{Pr(B|A) \times Pr(A)}{Pr(B)}$$
+:::
+
+## Bayes theorem
+
+-   In a population of 100,000 people, 100 of them are vampires.
+-   There is a test for vampirism construed by some big-pharma company, but...
+-   Of the 100 who are vampires, only 80 of them will test positive for vampirism
+-   Of the 99,900 mortals, 4995 of them will test positive for vampirism.
+-   If you take a test and obtain a positive result, what is a chance that you are a vampire?
+
+## Bayes theorem
+
+-   data ($\mathcal{D}$)
+-   parameters ($\theta$)
+
+::: {.absolute top="40%" left="15%"}
+$$Pr(\theta| \mathcal{D}) = \frac{Pr(\mathcal{D} | \theta) \times Pr(\theta)}{\int Pr(\mathcal{D} | \theta) \times Pr(\theta) \mathrm{d}\theta}$$
+:::
+
+## Bayes theorem
+
+::: {.absolute top="40%" left="15%"}
+$$Pr(\theta| \mathcal{D}) \approx Pr(\mathcal{D} | \theta) \times Pr(\theta)$$
+:::
+
+## Bayes theorem
+
+::: {.absolute top="40%" left="15%"}
+$$posterior \approx likelihood \times prior$$
+:::
+
+## Example
+
+You are testing a new drug that may increase the recovery rate from a disease. In a clinical trial of 100 patients, 55 recovered after receiving the drug. You want to estimate the probability of recovery (p).
+
+## Example - frequentist approach
+
+1.  Estimate $p$:
+
+The maximum likelihood estimate (MLE) is simply:
+
+$$
+\hat{p} = \frac{Number\ of\ recoveries}{Number\ of\ patients} = \frac{55}{100} = .55
+$$
+
+## Example - frequentist approach
+
+2.  Confidence Interval (using a normal approximation):
+
+$$
+Standard\ error\ (SE) = \sqrt{\frac{\hat{p}(1 - \hat{p})}{n}} = \sqrt{\frac{.55 \times .45}{100}} \approx .0497
+$$
+
+For a 95% confidence interval:
+
+$$
+\hat{p}\ \pm 1.96 \times SE = .55\ \pm 1.96 \times .0497 = (.4525, .6475)
+$$
+
+## Example - frequentist approach
+
+Interpretation:
+
+If we repeated the trial many times, 95% of these intervals would contain the true recovery probability.
+
+## Example - Bayesian approach
+
+Step 1: Prior Distribution
+
+Let’s assume you have some prior knowledge. Maybe from past studies, the recovery rate for similar drugs is around 50%, but you’re uncertain. A Beta distribution is commonly used for probabilities:
+
+$Prior: Beta(\alpha = 2, \beta = 2)$ - weakly informative prior centered around .5
+
+## Example - Bayesian approach
+
+```{r}
+seq(0, 1, length = 100) %>% 
+  enframe() %>% 
+  ggplot(aes(value))+
+  stat_function(fun = dbeta, args = list(shape1 = 2, shape2 = 2), linetype = 2, colour="gray", linewidth=1)+
+  scale_y_continuous("Density", limits = c(0, 8.5), breaks=0:8)+
+  scale_x_continuous("Recovery probability (p)")+
+  ggtitle("Prior distribution")
+```
+
+## Example - Bayesian approach
+
+Step 2: Likelihood (from the trial)
+
+You observed 55 recoveries out of 100 patients. The likelihood for a binomial outcome is:
+
+$$
+Likelihood: \mathcal{L}(p) = \binom{100}{55}p^{55}(1 - p)^{45}
+$$
+
+## Example - Bayesian approach
+
+Step 3: Posterior Distribution (Using Bayes' Theorem)
+
+For a Beta prior and binomial likelihood, the posterior is also a Beta distribution:
+
+$$
+Posterior: Beta(\alpha\ +\ successes, \beta\ +\ failures)
+$$
+
+-   Prior: $\alpha = 2, \beta = 2$
+-   Data: $successes = 55, failures = 45$
+
+So, the posterior is:
+
+$$
+Posterior: Beta(2 +\ 55, 2\ +\ 45) = Beta(57, 47)
+$$
+
+## Example - Bayesian approach
+
+```{r}
+seq(0, 1, length = 100) %>% 
+  enframe() %>% 
+  ggplot(aes(value))+
+  stat_function(fun = dbeta, args = list(shape1 = 2, shape2 = 2), linetype = 2, colour="gray", linewidth=1)+
+  stat_function(fun = dbeta, args = list(shape1 = 57, shape2 = 47), linetype = 2, colour="blue", linewidth=1)+
+  scale_y_continuous("Density", limits = c(0, 8.5), breaks=0:8)+
+  scale_x_continuous("Recovery probability (p)")+
+  ggtitle("Posterior vs. prior distribution")
+```
+
+## Example - Bayesian approach
+
+-   Posterior mean (Bayesian estimate of *p*):
+
+$$
+\hat{p}_{Bayes} = \frac{\alpha\ +\ successes}{\alpha\ +\ \beta\ +\ total} = \frac{57}{104} \approx .548
+$$
+
+-   95% Credible Interval:
+
+Using the posterior distribution, the 95% credible interval is approximately:
+
+$$
+(.45, .64)
+$$
+
+## Example - Bayesian approach
+
+Interpretation:
+
+There is a 95% probability that the true recovery rate is between 0.45 and 0.64, given our prior and observed data.
+
+# Summary
+
+## Frequentist vs. Bayesian statistics: basics
+
+::::::: columns
+:::: {.column width="50%"}
+**Frequentist**
+
+::: nonincremental
+-   parameters: fixed
+-   data: random
+-   probability = observed result from an infinite series of trials
+:::
+::::
+
+:::: {.column width="50%"}
+**Bayesian**
+
+::: nonincremental
+-   parameters: random
+-   data: fixed
+-   probability = the researcher 'degree of belief'
+:::
+::::
+:::::::
+
+## Frequentist vs. Bayesian statistics: model summaries
+
+::::::: columns
+:::: {.column width="50%"}
+**Frequentist**
+
+::: nonincremental
+-   results summarized with point estimates, standard errors, and confidence intervals
+:::
+::::
+
+:::: {.column width="50%"}
+**Bayesian**
+
+::: nonincremental
+-   results summarized with posterior distribution (mean, median, SD) and its credible intervals, probabilities of direction
+:::
+::::
+:::::::
+
+## Frequentist vs. Bayesian statistics: hypothesis testing
+
+::::::: columns
+:::: {.column width="50%"}
+**Frequentist**
+
+::: nonincremental
+-   NHST - deduction from the data given $H_0$, by setting $\alpha$ in advance; reject $H_0$ if $Pr(data | H_0) < \alpha$, not reject $H_0$ if $Pr(data | H_0) \geq \alpha$
+:::
+::::
+
+:::: {.column width="50%"}
+**Bayesian**
+
+::: nonincremental
+-   Bayes factors, model comparison based on information criteria, tests of practical equivalence
+:::
+::::
+:::::::
+
+## Reasons to Use the Bayesian Approach
+
+-   You have small sample sizes and complex models.\
+-   You can use information from various sources (e.g., previous studies).\
+-   You want to do more than simply reject the null hypothesis.\
+-   You want values that are more intuitive than p-values or confidence intervals (CIs).\
+-   You accept that there is always some uncertainty in our understanding of the world.
+
+# Additional content
+
+## Software for Bayesian modeling {.smaller}
+
+-   Majority of contemporary software offer modules for Bayesian analysis
+    -   Stata, SAS, MPlus, SPSS/Amos, JASP
+-   WinBUGS/OpenBUGS - classical, but slightly outdated
+-   **R**
+    -   JAGS
+    -   **Stan**
+    -   **brms**
+-   Python - Pymc3
+-   Julia - Turing
+
+## Books on Bayesian analysis
+
+![](figures/stat_reth.jpg)
+
+## Books on Bayesian analysis
+
+![](figures/dbda2.jpg)
+
+## Books on Bayesian analysis
+
+![](figures/bda3.jpg)
+
+## Books on Bayesian analysis
+
+![](figures/gill.jpg)
+
+## Books on Bayesian analysis
+
+![](figures/bcm.jpg)
+
+## Online resources:
+
+-   A. Solomon Kurz online book with examples from Statistical rethinking translated into brms: [here](https://bookdown.org/connect/#/apps/1850/access)
+-   A. Solomon Kurz online book with examples from Andrew Hayes (mediation and moderation analysis) book translated into brms: [here](https://bookdown.org/connect/#/apps/1850/access)
+-   A. Solomon Kurz online book with examples from Kruscke book translated into brms: [here](https://github.com/ASKurz/Doing-Bayesian-Data-Analysis-in-brms-and-the-tidyverse)
+
+## Home assignment
+
+[Here](https://github.com/wsoral/bsss2023/blob/main/home_assignments/homework1.qmd)

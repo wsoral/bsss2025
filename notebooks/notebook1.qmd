@@ -1,0 +1,117 @@
+---
+title: "Binary Classification"
+format: html
+---
+
+## Vampire problem
+
+In the population of 100,000 individuals, 100 are vampires.
+
+$P(vampire = positive)$
+Proportion of population affected by the condition.
+
+```{r}
+(prevalence) 
+```
+
+There is a test for vampirism construed by some big-pharma company, but...
+- Of the 100 who are vampires, only 80 of them will test positive for vampirism.
+
+$P(test = positive | vampire = positive)$
+(True positive rate) Proportion of those who are affected by the condition and are correctly tested positive.
+
+```{r}
+(sensitivity) 
+```
+
+- Of the 99,900 mortals, 4995 of them will test positive for vampirism.
+
+$P(test = negative | vampire = negative)$
+(True negative rate) Proportion of those who are not affected by the condition and are correctly tested negative.
+
+```{r}
+(specificity)
+```
+
+$P(test = positive | vampire = negative)$
+Complement proportion to specificity.
+
+```{r}
+(false_positive_rate)
+```
+
+$P(test = negative | vampire = positive)$
+Complement proportion to sensitivity.
+
+```{r}
+(false_negative_rate)
+```
+
+What is a probability that someone who obtained a positive test is a vampire?
+
+$P(vampire = positive ∧ test = positive)$
+Proportion of a population affected by a condition and correctly tested positive.
+
+```{r}
+(true_positive)
+```
+
+$P(vampire = negative ∧ test = positive)$
+Proportion of a population not affected by a condition and incorrectly tested positive.
+
+```{r}
+(false_positive)
+```
+
+$P(vampire = negative ∧ test = negative)$
+Proportion of a population not affected by a condition and correctly tested negative.
+
+```{r}
+(true_negative)
+```
+
+$P(vampire = positive ∧ test = negative)$
+Proportion of a population affected by a condition and incorrectly tested negative.
+
+```{r}
+(false_negative)
+```
+
+
+$P(vampire = positive | test = positive)$
+Proportion of those who tested positive and are affected by the condition.
+
+```{r}
+(positive_predictive_value)
+```
+
+$P(vampire = negative | test = negative)$
+Proportion of those who tested negative and are not affected by the condition.
+
+```{r}
+(negative_predictive_value)
+```
+
+$P(vampire = negative | test = positive)$
+Proportion of false positives in the pool of those that test positive.
+
+```{r}
+(false_discovery_rate)
+```
+
+$P(vampire = positive | test = negative)$
+Proportion of false negatives in the pool of those that test negative.
+
+```{r}
+(false_omission_rate)
+```
+
+
+$P(vampire = positive ∧ test = positive ∨ vampire = negative ∧ test = negative)$
+Proportion of the population that is true positive or true negative.
+
+```{r}
+(accuracy)
+```
+
+
