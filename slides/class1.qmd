@@ -396,4 +396,4 @@ There is a 95% probability that the true recovery rate is between 0.45 and 0.64,
 
 ## Home assignment
 
-[Here](https://github.com/wsoral/bsss2023/blob/main/home_assignments/homework1.qmd)
+[Here](https://github.com/wsoral/bsss2025/blob/main/home_assignments/homework1.qmd)
