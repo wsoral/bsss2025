@@ -3,3 +3,69 @@ title: "Homework 1"
 format: html
 ---
 
+1. I assume that in your empirical paper (or current empirical project), you used (are using) a frequentist approach to analyze your data. Given what you have learned about the Bayesian approach, would it be beneficial for you to switch? Provide a brief description of your current project (2–3 sentences) and at least two reasons why adopting a Bayesian approach might be advantageous, with justification. Additionally, outline two reasons why some might prefer to stick with the classical (frequentist) approach.
+
+2. Suppose your friend needs help solving a dating-related problem. They asked someone they like on a date and want to know whether that person might be interested in a more stable relationship.
+
+They read an article stating that among people of a similar age:
+- 50% are interested in a stable relationship,
+- 30% prefer to remain independent, and
+- 20% are unsure.
+
+This can be expressed as:
+$$
+P(interested) = 0.5\\
+P(not\ interested) = 0.3\\
+P(it's\ complicated) = 0.2
+$$
+
+Furthermore, the same study found that agreement to go on a date varies based on relationship preferences:
+
+- Those interested in a stable relationship agree to a date 20% of the time.
+- Those who prefer to remain independent agree 80% of the time.
+- Those who are unsure agree 50% of the time.
+
+These probabilities are given as:
+
+$$
+P(agree | interested) = 0.2\\
+P(agree | not\ interested) = 0.8\\
+P(agree | it's\ complicated) = 0.5
+$$
+
+Given that the person your friend asked agreed to go on the date, calculate the probabilities that they are:
+
+- Interested in a stable relationship:  $P(interested | agree)$
+- Not interested: $P(not interested | agree)$
+- Unsure: $P(it's complicated | agree)$
+
+Provide steps to solve this problem.
+
+3. Developing a strong understanding of distributions is essential for this class. In most cases, you will work with the Normal distribution, but the Beta distribution can also be useful for certain problems. In the class example, the research used a prior of $Beta(\alpha = 2, \beta = 2)$ to represent a recovery rate of 50% with significant uncertainty. Experiment with different parameter values to see how they affect the shape of the distribution. 
+
+
+```{r}
+## use the code below to install tidyverse if you haven't yet
+## install.packages(tidyverse)
+library(tidyverse)
+
+## Replace the values below
+dist_alpha = 2
+dist_beta = 2
+
+seq(0, 1, length = 100) %>% 
+  enframe() %>% 
+  rename(recovery= value) %>% 
+  ggplot(aes(x=recovery))+
+  stat_function(fun = dbeta, args = list(shape1=dist_alpha, shape2 = dist_beta))+
+  scale_x_continuous("Recovery probability", labels = scales::percent_format())
+```
+
+
+Next, propose a pair of values $(\alpha, \beta)$ that describe the following cases:
+- A scenario where the recovery rate is believed to be at least 50%, with values above 50% considered at most five times more likely than values below 50%.
+- A scenario where the recovery rate is believed to be at most 30%, with values below 30% considered at most eight times more likely than values above 30%.
+- A scenario where all recovery rates are equally likely.
+
+Using the provided code create a plot for each of these cases.
+

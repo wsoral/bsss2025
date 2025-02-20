@@ -212,7 +212,7 @@ seq(0, 1, length = 100) %>%
   ggplot(aes(value))+
   stat_function(fun = dbeta, args = list(shape1 = 2, shape2 = 2), linetype = 2, colour="gray", linewidth=1)+
   scale_y_continuous("Density", limits = c(0, 8.5), breaks=0:8)+
-  scale_x_continuous("Recovery probability (p)")+
+  scale_x_continuous("Recovery probability (p)", labels = scales::percent_format())+
   ggtitle("Prior distribution")
 ```
 
@@ -254,7 +254,7 @@ seq(0, 1, length = 100) %>%
   stat_function(fun = dbeta, args = list(shape1 = 2, shape2 = 2), linetype = 2, colour="gray", linewidth=1)+
   stat_function(fun = dbeta, args = list(shape1 = 57, shape2 = 47), linetype = 2, colour="blue", linewidth=1)+
   scale_y_continuous("Density", limits = c(0, 8.5), breaks=0:8)+
-  scale_x_continuous("Recovery probability (p)")+
+  scale_x_continuous("Recovery probability (p)", labels = scales::percent_format())+
   ggtitle("Posterior vs. prior distribution")
 ```
 
