@@ -1,0 +1,193 @@
+---
+title: "Beta-Binomial model"
+format: html
+---
+
+## Bem's (2011) ESP studies
+
+In his seminal paper, Bem (2011) argued that people can sometimes foresee the future. In one of his experiments, he asked participants to predict the future position of an erotic image that would appear on the screen.
+
+He reported: "Across all 100 sessions, participants correctly identified the future position of the erotic pictures significantly more frequently than the 50% hit rate expected by chance: 53.1%, t(99) = 2.51, p = .01, d = 0.25."
+
+Bem's data are not perfectly suited for the Beta-Binomial example, but let’s suppose you have a similar dataset:
+
+A total of 100 participants were asked to predict the future position of an erotic image, and 61 were successful.
+
+```{r}
+(n_trials = 100)
+(correct_predictions = 61)
+```
+
+## Frequentist approach
+
+How would this problem be treated using a frequentist approach? One could conduct a binomial test to test the null hypothesis that the proportion of successes is 50%.
+
+```{r}
+binom.test(correct_predictions, n_trials)
+```
+
+
+## Defining prior distribution
+
+First, let’s define our parameter space/grid — the possible success frequencies in Bem’s task. Since real numbers are continuous, the possible values are infinite. For simplicity, we’ll define a grid of representative parameter values.
+
+```{r}
+(p_grid = seq(0, 1, length.out = 100))
+```
+
+To define the plausibility of these values given parameters alpha and beta, we use the *dbeta* function.
+
+```{r}
+?dbeta
+```
+
+Set the values of *prior_alpha* and *prior_beta* according to your initial guess about the outcome of the experiment.
+
+```{r}
+prior_alpha
+prior_beta
+
+(prior = dbeta(p_grid, prior_alpha, prior_beta))
+```
+
+
+After setting the prior distribution, you can visualize it.
+
+```{r}
+library(tidyverse)
+theme_set(theme_classic())
+
+tibble(p_grid, prior) %>% 
+  ggplot(aes(p_grid, prior))+
+  geom_line()+
+  ggtitle("Prior distribution")+
+  labs(x= "Frequency of successes", y= "Plausibility")
+```
+
+## Obtaining the posterior distribution.
+
+Recall that with the Beta-Binomial model, the posterior distribution is:
+
+$$
+\mathcal{Beta}(k + \alpha,\ n - k + \beta)
+$$
+
+Set these parameters based on the provided information.
+
+```{r}
+posterior_alpha
+posterior_beta
+  
+posterior
+```
+
+
+Plot the results.
+
+```{r}
+tibble(p_grid, prior, posterior) %>% 
+  ggplot(aes(p_grid))+
+  geom_line(aes(y=prior, linetype="Prior"))+
+  geom_line(aes(y=posterior, linetype="Posterior"))+
+  ggtitle("Posterior and prior distributions")+
+  labs(x= "Frequency of successes", y= "Plausibility")+
+  theme(legend.text = element_blank(),
+        legend.position = "bottom")
+```
+
+
+## Interpreting the posterior distribution
+
+The mean of any Beta distribution is:
+
+$$
+\frac{\alpha}{\alpha+\beta}
+$$
+
+Compute the mean of the posterior distribution:
+
+```{r}
+(mean_beta)
+```
+
+Visualize the result on the plot:
+
+```{r}
+tibble(p_grid, prior, posterior) %>% 
+  ggplot(aes(p_grid))+
+  geom_line(aes(y=prior, linetype="Prior"))+
+  geom_line(aes(y=posterior, linetype="Posterior"))+
+  geom_segment(x=mean_beta, xend= mean_beta, y=0, yend=dbeta(mean_beta, posterior_alpha, posterior_beta), 
+               linetype=2)+
+  ggtitle("Posterior and prior distributions")+
+  labs(x= "Frequency of successes", y= "Plausibility")+
+  theme(legend.title = element_blank(),
+        legend.position = "bottom")
+```
+
+
+## Finding credible intervals
+
+Use the *qbeta* function to find quantiles of the posterior Beta distribution.
+
+```{r}
+probs = c(0.025, 0.25, 0.5, 0.75, 0.975)
+quantiles = qbeta(probs, posterior_alpha, posterior_beta)
+densities = dbeta(quantiles, posterior_alpha, posterior_beta)
+aux_data = tibble(probs, quantiles, densities, )
+aux_data
+```
+
+
+Plot the credible intervals:
+
+```{r}
+tibble(p_grid, prior, posterior) %>% 
+  ggplot(aes(p_grid))+
+  geom_line(aes(y=prior, linetype="Prior"))+
+  geom_line(aes(y=posterior, linetype="Posterior"))+
+  geom_segment(aes(x=quantiles, xend= quantiles, y=rep(0, 5), yend=densities), aux_data , linetype=2)+
+  ggtitle("Posterior and prior distributions")+
+  labs(x= "Frequency of successes", y= "Plausibility")+
+  theme(legend.title = element_blank(),
+        legend.position = "bottom")
+```
+
+
+## Predicting future outcomes
+
+With the posterior distribution in hand, we can predict future outcomes of similar experiments.
+
+```{r}
+##  Set a high number of simulations
+n_samples = 1000
+## Sample values from the posterior distribution
+posterior_sample = rbeta(n_samples, posterior_alpha, posterior_beta)
+## Based on sampled values, simulate experimental outcomes
+posterior_predictive = rbinom(n_samples, n_trials, posterior_sample)
+## Plot the frequencies of outcomes
+tibble(posterior_predictive) %>% 
+  ggplot(aes(x= posterior_predictive))+
+  geom_histogram(bins=10, colour="black", fill="lightblue")
+```
+
+
+## Bayes factor via Savage-Dickey density ratio.
+
+The Savage-Dickey density ratio tells us how much we should update our belief in the null hypothesis (proportion = 0.5) after seeing the data.
+
+```{r}
+sd_density_ratio = dbeta(0.5, posterior_alpha, posterior_beta)/ dbeta(0.5, prior_alpha, prior_beta)
+sd_density_ratio
+```
+
+We can also compute the inverse to see how much the data supports the alternative hypothesis.
+
+```{r}
+1/sd_density_ratio
+```
+
+## Testing different prior
+
+Now, try changing the prior distribution to a skeptical prior — a Beta distribution where you are almost sure the most probable outcome is 0.5. Copy and modify the code above to see how different priors affect the results!
+
