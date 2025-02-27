@@ -1,0 +1,124 @@
+---
+title: "Homework2"
+format: html
+---
+
+**Bayesian Analysis of Donut Quality**
+
+### Objective:
+The goal of this assignment is to deepen your understanding of Bayesian statistics, the Beta-Binomial model, and how prior beliefs influence posterior distributions. You will analyze experimental data, run R code, interpret the results, and write a short report explaining your findings.
+
+
+### Part 1: Investigating Donut Quality with the Beta-Binomial Model
+
+1. **Setting Up the Problem:**
+   - You own a store and order batches of jam-filled donuts from a local producer.
+   - The producer claims that at least 80% of the donuts are filled with jam, but you’re skeptical.
+   - You randomly eat 20 donuts and find that only 12 contain jam.
+   - Set the number of trials and successful outcomes in R:
+
+```{r}
+
+```
+
+2. **Frequentist Approach:**
+   - Use a binomial test to check whether the proportion of jam-filled donuts is significantly different from 80%.
+
+```{r}
+
+```
+
+3. **Question:**
+   - What is the p-value of the test? How would you interpret it in the context of deciding whether to complain to the producer?
+
+---
+
+### Part 2: Bayesian Approach
+
+1. **Defining the Prior:**
+   - Define a grid of possible filling rates.
+
+```{r}
+
+```
+
+2. **Choosing Priors:**
+   - Try different priors:
+     - **Agnostic prior:** 
+     - **Skeptical prior:** (you strongly doubt the 80% claim)
+     - **Trustworthy prior:** (you trust the producer)
+
+3. **Computing the Posterior:**
+   - Use the Beta-Binomial model to compute the posterior distribution.
+
+```{r}
+
+```
+
+4. **Plotting the Posterior:**
+   - Visualize both the prior and posterior distributions on the same plot.
+
+5. **Questions:**
+   - How does the posterior distribution change relative to the prior?
+   - What is the mean of the posterior distribution?
+
+---
+
+### Part 3: Posterior Inference
+
+1. **Credible Intervals:**
+   - Compute 50% and 95% credible intervals using the *qbeta* function.
+
+```{r}
+
+```
+
+2. **Question:**
+   - What do these credible intervals tell you about the true proportion of jam-filled donuts?
+
+---
+
+### Part 4: Sensitivity to Priors
+
+1. **Testing Different Priors:**
+   - Compare the results using the agnostic, skeptical, and trustworthy priors.
+
+2. **Question:**
+   - Which prior seems most reasonable given your experience with the producer?
+   - Should you file a complaint based on the posterior distribution and credible intervals?
+
+---
+
+### Part 5: Bayes Factor via Savage-Dickey Ratio
+
+1. **Computing the Bayes Factor:**
+   - Use the Savage-Dickey density ratio to compute the Bayes factor for the null hypothesis (filling rate = 0.8).
+
+```{r}
+
+```
+
+2. **Question:**
+   - Interpret the Bayes factor. Does it strengthen or weaken your case for a complaint?
+
+---
+
+### Final Report
+
+Write a short report (500-700 words) summarizing your analysis:
+- Explain the results of the frequentist test and the Bayesian analysis.
+- Discuss how prior beliefs affect the conclusions.
+- Interpret the credible intervals and Bayes factor.
+- Conclude whether the data convincingly suggest that the producer’s 80% claim is unreliable.
+
+Use plots to support your explanations!
+
+---
+
+**Submission:**
+- Submit your R code, plots, and the final report as a Quarto document.
+
+Good luck — and may your donuts always be filled with jam! 🍩
+
+
+
