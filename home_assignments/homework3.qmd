@@ -1,0 +1,23 @@
+---
+title: "Homework assignment 3"
+format: html
+---
+
+## Data
+
+The data below represent a subset of an experiment investigating the effect of low- versus high-control threat induction on belief in conspiracy theories, which people may use to blame others for their misfortunes.  
+Participants were randomly assigned to either a high- or low-control condition (*CONDITION*) and were then asked about their agreement with five different theories. The average agreement score was recorded as *GENERIC_BLAME*.  
+Participants in the high-control condition were asked how much control they have over simple things, such as selecting the music they listen to or deciding what to have for breakfast.  
+Participants in the low-control condition were asked how much control they have over uncontrollable events, such as being injured in a traffic accident or experiencing a natural disaster.  
+
+Here is the dataset:  
+
+```{r}
+library(tidyverse)
+
+blaming <- read_csv("data_files/blaming.csv")
+blaming
+```
+
+Analyze the results of this study using a two-group normal model in brms. Follow the steps covered in class and write a short report summarizing the results.
+

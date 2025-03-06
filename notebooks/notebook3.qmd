@@ -272,7 +272,7 @@ hypothesis(fit_normal_two_group, "groupalcohol - groupplacebo = 0") %>%
 Finally, compare the results to a frequentist approach:
 
 ```{r}
-t.test(react_time ~ group, data = alcoholRT)
+t.test(react_time ~ group, data = alcoholRT, var.equal=T)
 ```
 
 
