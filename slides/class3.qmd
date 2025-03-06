@@ -1,0 +1,171 @@
+---
+title: "Class 3"
+format:
+  revealjs:
+    theme: solarized
+editor: visual
+---
+
+## Summing random variables
+
+- Suppose you and a thousand of your closest friends line up on the halfway line of a football field.
+
+![](figures/football.webp)
+
+## Summing random variables
+
+::: incremental 
+- Each of you has a coin in your hand.
+- At the sound of the whistle, you begin flipping the coins. 
+- Each time a coin comes up heads, that person moves one step towards the left-hand goal.
+- Each time a coin comes up tails, that person moves one step towards the right-hand goal.
+- Each person flips the coin 16 times, follows the implied moves, and then stands still.
+- Now we measure the distance of each person from the halfway line.
+:::
+
+## Summing random variables
+
+- Can you predict what proportion of the thousand people who are standing on the halfway line?
+
+![](figures/football.webp)
+
+
+## Summing random variables
+
+```{r}
+library(tidyverse)
+theme_set(theme_classic())
+
+# we set the seed to make the results of `runif()` reproducible.
+set.seed(4)
+
+pos <- 
+  # make data with 100 people, 16 steps each with a starting point of `step == 0` (i.e., 17 rows per person)
+  crossing(person = 1:100,
+           step   = 0:16) %>% 
+  # for all steps above `step == 0` simulate a `deviation`
+  mutate(deviation = map_dbl(step, ~if_else(. == 0, 0, runif(1, -1, 1)))) %>% 
+  # after grouping by `person`, compute the cumulative sum of the deviations, then `ungroup()`
+  group_by(person) %>%
+  mutate(position = cumsum(deviation)) %>% 
+  ungroup() 
+
+ggplot(data = pos, 
+       aes(x = step, y = position, group = person)) +
+  geom_vline(xintercept = c(4, 8, 16), linetype = 2) +
+  geom_line(aes(color = person < 2, alpha  = person < 2)) +
+  scale_color_manual(values = c("skyblue4", "black")) +
+  scale_alpha_manual(values = c(1/5, 1)) +
+  scale_x_continuous("step number", breaks = c(0, 4, 8, 12, 16)) +
+  theme(legend.position = "none")
+```
+
+## Summing random variables
+
+```{r}
+# Figure 4.2.a.
+p1 <-
+  pos %>%
+  filter(step == 4) %>%
+  ggplot(aes(x = position)) +
+  geom_line(stat = "density", color = "dodgerblue1") +
+  coord_cartesian(xlim = c(-6, 6)) +
+  labs(title = "4 steps")
+
+# Figure 4.2.b.
+p2 <-
+  pos %>%
+  filter(step == 8) %>%
+  ggplot(aes(x = position)) +
+  geom_density(color = "dodgerblue2") +
+  coord_cartesian(xlim = c(-6, 6)) +
+  labs(title = "8 steps")
+
+p3 <-
+  pos %>%
+  filter(step == 16) %>%
+  ggplot(aes(x = position)) +
+  stat_function(fun = dnorm, 
+                args = list(mean = 0, sd = 2.180408),
+                linetype = 2) +  # 2.180408 came from the previous code block
+  geom_density(color = "transparent", fill = "dodgerblue3", alpha = 1/2) +
+  coord_cartesian(xlim = c(-6, 6)) +
+  labs(title = "16 steps",
+       y = "density")
+
+
+library(patchwork)
+
+# combine the ggplots
+p1 | p2 | p3
+```
+
+## Why be Normal?
+
+- A lot of phenomena results from summing of random variables. Thus, although their distribution will not be perfeclty Gaussian, it will tend to like like Normal distribution.
+- When all we know, or we are willing to know, about the distribution of variable is its mean and variance, Normal is the least surprising and least informative distribution we can choose. It is the most natural expression of our ignorance.
+- See McElreath (2015)
+
+# Normal-Normal model
+
+## Normal-Normal model
+
+X is distributed as Normal 
+$$
+X|\mu,\ \sigma_0^2 \sim \mathcal{N}(\mu, \sigma_0^2) \\
+= (2\pi\sigma_0^2)^{-\frac{1}{2}}\mathrm{exp} \left[-\frac{1}{2\sigma_0^2}(X - \mu)^2\right]
+$$
+
+Where 
+$$
+- \infty < \mu < \infty, \sigma_0^2\ \mathrm{known} \\ \\
+$$
+
+## Normal-Normal model
+
+$\mu$ is given a Normal prior 
+$$
+\mu|m,\ s^2 \sim \mathcal{N}(m, s^2) \\
+= (2\pi s^2)^{-\frac{1}{2}}\mathrm{exp} \left[-\frac{1}{2s^2}(\mu - m)^2\right]\\
+m,\ s^2 \mathrm{known}
+$$
+
+## Normal-Normal model
+
+$$
+\pi(\mu|\mathbf{x}) \propto p(\mathbf{x}|\mu)p(\mu)\\
+\propto \prod_{i=1}^n\mathrm{exp} \left[-\frac{1}{2\sigma_0^2}(X - \mu)^2\right]\mathrm{exp} \left[-\frac{1}{2s^2}(\mu - m)^2\right]\\
+\propto \left[-\frac{1}{2}\left(\frac{1}{s^2} + \frac{n}{\sigma_0^2}\right)\left(\mu - \frac{\left(\frac{m}{s^2} + \frac{n\bar{x}}{\sigma_0^2}\right)}{\left(\frac{1}{s^2} + \frac{n}{\sigma_0^2}\right)}\right)\right]
+$$
+
+
+## Normal-Normal model
+
+
+Posterior mean is
+
+$$
+\hat{\mu} = \left. \left(\frac{m}{s^2} + \frac{n\bar{x}}{\sigma_0^2}\right) \middle/ \left(\frac{1}{s^2} + \frac{n}{\sigma_0^2}\right) \right.
+$$
+
+and variance of posterior for mean is:
+
+$$
+\hat{\sigma}_\mu^2 = \left(\frac{1}{s^2} + \frac{n}{\sigma_0^2}\right)^{-1}
+$$
+
+
+# Switching to numerical approach
+
+## Switching to numerical approach
+
+- With increasing model complexity, we may find that the analytic approach (using mathematical formulas) becomes impractical.
+  - You might want to use priors and likelihoods other than the Normal distribution.
+  - You might want to use multivariate or multiparameter models.
+  
+## Switching to numerical approach
+
+- Therefore, we will switch to a numerical approach that relies on mathematical simulations. These simulations allow us to find the posterior distribution without needing to solve complex integrals.
+
+- The most commonly used approach in Bayesian analysis is Markov chain Monte Carlo (MCMC). You will learn more about it in our next class.
+

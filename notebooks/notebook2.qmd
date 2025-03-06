@@ -44,8 +44,8 @@ To define the plausibility of these values given parameters alpha and beta, we u
 Set the values of *prior_alpha* and *prior_beta* according to your initial guess about the outcome of the experiment.
 
 ```{r}
-prior_alpha
-prior_beta
+prior_alpha = 1
+prior_beta = 1
 
 (prior = dbeta(p_grid, prior_alpha, prior_beta))
 ```
@@ -75,10 +75,10 @@ $$
 Set these parameters based on the provided information.
 
 ```{r}
-posterior_alpha
-posterior_beta
+posterior_alpha = prior_alpha + correct_predictions
+posterior_beta = prior_beta + n_trials - correct_predictions
   
-posterior
+posterior = dbeta(p_grid, posterior_alpha, posterior_beta)
 ```
 
 
@@ -107,7 +107,7 @@ $$
 Compute the mean of the posterior distribution:
 
 ```{r}
-(mean_beta)
+(mean_beta = posterior_alpha/(posterior_alpha + posterior_beta))
 ```
 
 Visualize the result on the plot:
@@ -190,4 +190,7 @@ We can also compute the inverse to see how much the data supports the alternativ
 ## Testing different prior
 
 Now, try changing the prior distribution to a skeptical prior — a Beta distribution where you are almost sure the most probable outcome is 0.5. Copy and modify the code above to see how different priors affect the results!
+
+
+
 
