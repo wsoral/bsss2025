@@ -1,0 +1,182 @@
+---
+title: "Class 2 notebook"
+format: html
+editor: visual
+---
+
+## Working with posterior (MCMC) objects
+
+Most of your work during this class will involve working with posteriors estimated using simulated MCMC draws. These MCMC draws are stored in array-like R objects. These arrays contain a list of values for each parameter in a model.
+
+We will begin by loading and taking a quick look at such an array with posterior of 1 parameter. Assume that this parameter reflects an effect of some experimental treatment (i.e., we want to know whether the treatment vs. control had any effect on DV). Numbers represent samples from the posterior distribution of the standardized difference.
+
+```{r}
+posterior <- readRDS("data_files/c2_posterior.rds")
+head(posterior)
+```
+
+## Plotting posterior distribution
+
+There are many ways to visualize posterior distribution. You can use basic plotting utilities or *ggplot2*. Here, e will use an R package *bayesplot*.
+
+Posterior can be plotted as a traceplot using a function `mcmc_trace`. Note that all plotting functions in *bayesplot* start with `mcmc_` and end with a plot type.
+
+```{r}
+library(bayesplot)
+mcmc_trace(posterior)
+```
+
+X-axis represent draw id, Y-axis represent draw value.
+
+Another helpful plot is a histogram (`mcmc_hist`).
+
+```{r}
+mcmc_hist(posterior)
+```
+
+Finally, posterior can be plotted using a density plot.
+
+```{r}
+mcmc_dens(posterior)
+```
+
+## Point estimates
+
+Because the posterior estimated using MCMC sample is just a list of numbers, it can be easily summarized with any function that you use for descriptive statistics in R. For example, to obtain posterior mean, we simply write:
+
+```{r}
+mean(posterior)
+```
+
+Or to obtain median:
+
+```{r}
+median(posterior)
+```
+
+You can also use a *bayestestR* package to do this in a more convenient way.
+
+```{r}
+library(bayestestR)
+point_estimate(posterior)
+```
+
+## Uncertainty
+
+You could use `quantile` function to obtain 95% credible interval.
+
+```{r}
+quantile(posterior, probs = c(0.025, 0.975))
+```
+
+But you can also use a function `eti` from *bayestestR* for equal-tailed credible intervals.
+
+```{r}
+eti(posterior)
+```
+
+To obtain highest density intervals use a function `hdi` from *bayestestR*.
+
+```{r}
+hdi(posterior)
+```
+
+We can now see that there is some uncertainty with regards to the size of experimental treatment. We cannot entirely exclude that the effect is very small nor that it is large.
+
+## Existence
+
+To do a more formal test of whether the effect exists, we can use `p_direction` from *bayestestR*. It tests what is the probability that the direction of the effect is consistent with the point estimate of the effect.
+
+```{r}
+p_direction(posterior)
+```
+
+It is likely that the effect exist.
+
+You can also plot the results. Note that we need to provide an actual fit if we want this plotting function to run.
+
+```{r}
+fit <- readRDS("data_files/c2_fit.rds")
+
+plot(p_direction(fit))
+```
+
+## Significance
+
+Finally, we can test whether the effect is significant by testing to what extent the posterior overlaps with the region of practical equivalence (ROPE).
+
+Because the DV was standardized, we can assume that differences smaller than \|0.10\| are negligible (i.e., very small values of Cohen's d).
+
+We can see the result better using a plot.
+
+```{r}
+plot(rope(fit, range = c(-0.10, 0.10)))
+```
+
+We see that: 1) 95% CI and ROPE overlap to some extent, thus we cannot exclude that the effect is very small. 2) 100% CI ROPE overlap more than 2.5%, thus we cannot exclude that the effect is very small
+
+Another way to conduct analysis with this approach is by using a function `equivalence_test`.
+
+The first approach (inside ROPE should be 0, 100):
+
+```{r}
+equivalence_test(posterior, range = c(-0.1, 0.1), ci=.95)
+```
+
+The second approach (inside ROPE should be smaller than 2.5% or greater than 97.5%):
+
+```{r}
+equivalence_test(posterior, range = c(-0.1, 0.1), ci=1)
+```
+
+## Putting it all together.
+
+You can make everything faster with a function `describe_posterior`.
+
+```{r}
+describe_posterior(posterior)
+```
+
+Or you can use a function `sexit` which is an acronym for sequential effect existence and significance testing.
+
+Here, I used a threshold of \|.1\| to reflect effects that are significant (vs. negligible) and threashold of \|.8\| to reflect effects that are large.
+
+```{r}
+sexit(posterior, significant = 0.1, large = 0.8)
+```
+## Exercises
+
+Below we will go back to dataset from previous class in which we analyzed differences in RT between alcohol and placebo groups.
+
+```{r}
+H1 <- hypothesis(fit_normal_two_group, "groupalcohol - groupplacebo = 0") %>% 
+  .$samples
+H1 %>% head()
+```
+
+Find point estimates of central tendency of the posterior distribution describing difference between alcohol and placebo groups.
+
+```{r}
+
+```
+
+Find intervals that describe uncertainty related to the effect of alcohol. Use both credible and highest density intervals.
+
+```{r}
+
+```
+
+```{r}
+
+```
+What is a probability that the effect of alcohol (vs. placebo) consumption is positive?
+
+```{r}
+
+```
+Conduct equivalence testing to check whether the obtained effect is different than a region of practical equivalence defined as ROPE = [-0.25, 0.25].
+
+```{r}
+
+```
+
