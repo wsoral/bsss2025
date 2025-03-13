@@ -14,8 +14,8 @@ theme_set(theme_classic())
 
 ## Finding denominator of Bayes theorem
 
-- Obtaining the posterior distribution requires finding the value of denominator. 
-- The solution of integration is a value which is use to normalize the posterior distribution.
+-   Obtaining the posterior distribution requires finding the value of denominator.
+-   The solution of integration is a value which is use to normalize the posterior distribution.
 
 $$
 P(\theta | \mathcal{D}) = \frac{P(\mathcal{D} | \theta)\times P(\mathcal{D} | \theta)}{\int{P(\mathcal{D} | \theta)\times P(\mathcal{D} | \theta)}d\theta}
@@ -39,8 +39,7 @@ tibble(x = seq(-4, 4, length.out = 100)) %>%
   labs(x=expression(theta), y=expression("P("~theta~")"))
 ```
 
-
-## Approximating area under function 
+## Approximating area under function
 
 ```{r}
 rectangle <- 
@@ -91,11 +90,10 @@ Accepted values of x have Normal distribution.
 sims %>% 
   filter(accept=="yes") %>% 
   ggplot(aes(sample=x_sim))+
-  stat_qq(alpha = 0.4)+
-  stat_qq_line()
+  stat_qq(alpha = 0.4,)+
+  stat_qq_line()+
+  labs(x="Normal theoretical quantiles", y= "Sample quantiles")
 ```
-
-
 
 ## Markov chain Monte Carlo
 
@@ -114,7 +112,6 @@ mcmc_trace(x)+
   ggtitle("A traceplot of 250 draws from a posterior distribution")
 ```
 
-
 ## Markov chain Monte Carlo
 
 ```{r}
@@ -122,14 +119,12 @@ mcmc_hist(x)+
   ggtitle("A histogram of 250 draws from a posterior distribution")
 ```
 
-
 ## Markov chain Monte Carlo
 
 ```{r}
 mcmc_dens(x)+
   ggtitle("A density plot of 250 draws from a posterior distribution")
 ```
-
 
 # Describing posterior distribution
 
@@ -192,8 +187,9 @@ mcmc_dens(rbind(x, x+100))+
 
 ```{r}
 library(bayestestR)
-p_significance(x) %>% 
-  plot()
+fit <- readRDS("../notebooks/data_files/c2_fit.rds")
+
+plot(p_direction(fit))
 ```
 
 -   Probability of Direction: 0.93
@@ -227,5 +223,3 @@ rope(x, range=c(-10,10)) %>%
 -   \<2.5% in ROPE: probably significant
 -   \<1% in ROPE: significant (we can reject the null hypothesis)
 :::
-
-
