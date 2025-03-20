@@ -1,0 +1,41 @@
+---
+title: "Homework assignment 4"
+format: html
+---
+
+In this homework, we will continue working with the synthetic dataset from class.
+
+```{r}
+set.seed(5432)
+x1 <- c(round(rnorm(40, 24.5, sd = 1), 2), round(rnorm(5, 24.5, 1) - 8, 2))
+x2 <- c(round(rnorm(45, 25.0, sd = 5), 2))
+
+dv <- c(x1, x2)
+iv <- rep(c("g1", "g2"), each = 45)
+
+df <- tibble(iv, dv)
+df %>%
+  ggplot(aes(iv, dv)) +
+  geom_boxplot()
+```
+
+
+Your friend proposed a new model, claiming it makes the difference between group means more credible.
+Should you be concerned about these results?
+
+Evaluate this model using the WAMBS checklist (points 1 to 6) and identify any potential issues in the analysis.
+
+```{r}
+library(brms)
+
+fit_test <- brm(bf(dv ~ 0 + iv,
+                   sigma ~ 0 + iv + dv),
+                data = df,
+                family = student,
+                iter = 500)
+
+fit_test
+```
+
+
+
