@@ -255,6 +255,8 @@ validate_prior(bf(dv ~ 0 + iv,
                prior = priors_robust)
 ```
 
+
+
 ### **To be checked after estimation but before inspecting model results**
 
 2. **Does the trace plot exhibit convergence?**
