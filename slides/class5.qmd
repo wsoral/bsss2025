@@ -1,0 +1,202 @@
+---
+title: "Class 5"
+format:
+  revealjs:
+    theme: solarized
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(patchwork)
+theme_set(theme_classic())
+```
+
+## Student t distribution
+
+```{r}
+crossing(nu = c(Inf, 4, 2, 1),
+         y  = seq(from = -8, to = 8, length.out = 500)) %>% 
+  mutate(density = dt(x = y, df = nu)) %>% 
+  # this line is unnecessary, but will help with the plot legend
+  mutate(nu = factor(nu, levels = c("Inf", "4", "2", "1"))) %>% 
+  # plot
+  ggplot(aes(x = y, y = density, group = nu, color = nu)) +
+  geom_line() +
+  scale_y_continuous(expression(p(y)), expand = expansion(mult = c(0, 0.05))) +
+  coord_cartesian(xlim = c(-6, 6)) +
+  theme(legend.position = c(.92, .75))
+```
+
+## BEST
+
+```{r}
+
+anno_col = "red"
+# exponential density
+p1 <-
+  tibble(x = seq(from = 0, to = 1, by = .01)) %>% 
+  ggplot(aes(x = x, y = (dexp(x, 2) / max(dexp(x, 2))))) +
+  geom_area() +
+  annotate(geom = "text",
+           x = .5, y = .2,
+           label = "exp",
+           size = 7, color=anno_col) +
+  annotate(geom = "text",
+           x = .5, y = .6,
+           label = "italic(K)",
+           size = 7, family = "Times", parse = T, color=anno_col) +
+  scale_x_continuous(expand = c(0, 0)) +
+  theme_void() +
+  theme(axis.line.x = element_line(linewidth = 0.5))
+
+# normal density
+p2 <-
+  tibble(x = seq(from = -3, to = 3, by = .1)) %>% 
+  ggplot(aes(x = x, y = (dnorm(x)) / max(dnorm(x)))) +
+  geom_area() +
+  annotate(geom = "text",
+           x = 0, y = .2,
+           label = "normal",
+           size = 7, color=anno_col) +
+  annotate(geom = "text",
+           x = c(0, 1.5), y = .6,
+           label = c("italic(M)", "italic(S)[mu]"), 
+           size = 7, family = "Times", parse = T, color=anno_col) +
+  scale_x_continuous(expand = c(0, 0)) +
+  theme_void() +
+  theme(axis.line.x = element_line(linewidth = 0.5))
+
+# half-normal density
+p3 <-
+  tibble(x = seq(from = 0, to = 3, by = .01),
+         d = (dnorm(x)) / max(dnorm(x))) %>% 
+  ggplot(aes(x = x, y = d)) +
+  geom_area() +
+  annotate(geom = "text",
+           x = 1.5, y = .2,
+           label = "half-normal",
+           size = 7, color=anno_col) +
+  annotate(geom = "text",
+           x = 1.5, y = .6,
+           label = "0*','*~italic(S)[sigma]", 
+           size = 7, family = "Times", parse = T, color=anno_col) +
+  scale_x_continuous(expand = c(0, 0)) +
+  theme_void() +
+  theme(axis.line.x = element_line(linewidth = 0.5))
+
+my_arrow <- arrow(angle = 20, length = unit(0.35, "cm"), type = "closed")
+
+# four annotated arrows
+p4 <-
+  tibble(x    = c(.43, .43, 1.5, 2.5),
+         y    = c(1, .55, 1, 1),
+         xend = c(.43, 1.15, 1.5, 1.8),
+         yend = c(.8, .15, .2, .2)) %>%
+  
+  ggplot(aes(x = x, xend = xend,
+             y = y, yend = yend)) +
+  geom_segment(arrow = my_arrow) +
+  annotate(geom = "text",
+           x = c(.3, .65, 1.38, 1.62, 2, 2.3), y = c(.92, .25, .6, .6, .6, .6),
+           label = c("'~'", "'='", "'~'", "italic(j)", "'~'", "italic(j)"),
+           size = c(10, 10, 10, 7, 10, 7), 
+           family = "Times", parse = T, color=anno_col) +
+  annotate(geom = "text",
+           x = .43, y = .7,
+           label = "nu*minute+1",
+           size = 7, family = "Times", parse = T, color=anno_col) +
+  xlim(0, 3) +
+  theme_void()
+
+# student-t density
+p5 <-
+  tibble(x = seq(from = -3, to = 3, by = .1)) %>% 
+  ggplot(aes(x = x, y = (dt(x, 3) / max(dt(x, 3))))) +
+  geom_area() +
+  annotate(geom = "text",
+           x = 0, y = .2,
+           label = "student t",
+           size = 7, family = "Times", color=anno_col) +
+  annotate(geom = "text",
+           x = 0, y = .6,
+           label = "nu~~~mu[italic(j)]~~~sigma[italic(j)]",
+           size = 7, family = "Times", parse = T, color=anno_col) +
+  scale_x_continuous(expand = c(0, 0)) +
+  theme_void() +
+  theme(axis.line.x = element_line(linewidth = 0.5))
+
+# the final annotated arrow
+p6 <-
+  tibble(x     = c(.375, .625),
+         y     = c(1/3, 1/3),
+         label = c("'~'", "italic(i)*'|'*italic(j)")) %>% 
+  
+  ggplot(aes(x = x, y = y, label = label)) +
+  geom_text(size = c(10, 7), parse = T, family = "Times", color=anno_col) +
+  geom_segment(x = .5, xend = .5,
+               y = 1, yend = 0, 
+               arrow = my_arrow) +
+  xlim(0, 1) +
+  theme_void()
+
+# some text
+p7 <-
+  tibble(x     = .5,
+         y     = .5,
+         label = "italic(y)[italic(i)*'|'*italic(j)]") %>% 
+  
+  ggplot(aes(x = x, y = y, label = label)) +
+  geom_text(size = 7, parse = T, family = "Times", color=anno_col) +
+  xlim(0, 1) +
+  theme_void()
+
+# define the layout
+layout <- c(
+  area(t = 1, b = 2, l = 1, r = 2),
+  area(t = 1, b = 2, l = 3, r = 4),
+  area(t = 1, b = 2, l = 5, r = 6),
+  area(t = 4, b = 5, l = 3, r = 4),
+  area(t = 3, b = 4, l = 1, r = 6),
+  area(t = 6, b = 6, l = 3, r = 4),
+  area(t = 7, b = 7, l = 3, r = 4)
+)
+
+# combine and plot!
+(p1 + p2 + p3 + p5 + p4 + p6 + p7) + 
+  plot_layout(design = layout) &
+  ylim(0, 1) &
+  theme(plot.margin = margin(0, 5.5, 0, 5.5))
+```
+
+
+## WAMBS checklist
+
+When to worry, and how to Avoid the Misuse of Bayesian Statistics
+
+Depaoli, S., Van de Schoot, R. (2017). Improving Transparency and Replication in Bayesian Statistics: The WAMBS-Checklist. Psychological Methods, 22(2), 240-261. http://dx.doi.org/10.1037/met0000065
+
+## WAMBS checklist
+
+**To be checked before estimating the model**
+
+1. Do you understand the priors?
+
+## WAMBS checklist
+
+**To be checked after estimation but before inspecting model results**
+
+2. Does the trace-plot exhibit convergence?
+3. Does convergence remain after doubling the number of iterations?
+4. Does the posterior distribution histogram have enough information?
+5. Do the chains exhibit a strong degree of autocorrelation?
+6. Do the posterior distributions make substantive sense?
+
+## WAMBS checklist
+
+**Understanding the exact influence of the priors**
+
+7. Do different specification of the multivariate variance priors influence the results?
+8. Is there a notable effect of the prior when compared with non-informative priors?
+9. Are the results stable from a sensitivity analysis?
+10. Is the Bayesian way of interpreting and reporting model results used?

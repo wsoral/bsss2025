@@ -1,0 +1,386 @@
+---
+title: "Class 5"
+format: html
+---
+
+
+## Robust Bayesian Estimation
+
+First, we load the required libraries:
+
+```{r}
+library(tidyverse)
+theme_set(theme_classic())
+```
+
+In this example, we create a synthetic dataset, allowing us to know the true values of the population parameters.
+
+Group 1 follows a Normal distribution:
+
+$$
+y_1 \sim \text{Normal}(24.5, 1)
+$$
+
+
+However, the sample includes five outliers.
+
+Group 2 also follows a Normal distribution but with different parameters:
+
+$$
+y_2 \sim \text{Normal}(25.0, 5)
+$$
+
+```{r}
+set.seed(5432)
+x1 <- c(round(rnorm(40, 24.5, sd = 1), 2), round(rnorm(5, 24.5, 1) - 8, 2))
+x2 <- c(round(rnorm(45, 25.0, sd = 5), 2))
+
+dv <- c(x1, x2)
+iv <- rep(c("g1", "g2"), each = 45)
+
+df <- tibble(iv, dv)
+df %>%
+  ggplot(aes(iv, dv)) +
+  geom_boxplot()
+```
+
+### Frequentist (Classical) t-test
+
+```{r}
+df %>%
+  t.test(dv ~ iv, data = ., var.equal = TRUE)
+```
+
+We observe that the estimate of the mean for Group 1 is significantly affected by outliers. Would accounting for these outliers lead to a meaningful difference?
+
+We use a Bayesian approach to explore this question.
+
+```{r}
+library(brms)
+```
+
+### Bayesian Model Setup
+
+1. We use a Student's t-distribution instead of a Normal distribution to model the dependent variable.
+2. We explicitly compare the standard deviations (sigmas) of Groups 1 and 2.
+
+When interested in not only the mean of the response variable for each group but also other parameters that define the distribution, a distributional model should be used.
+
+`bf()` merges formulas for multiple distributional parameters. Below, the first line specifies a formula for the mean, and the second line specifies a formula for the standard deviation (SD).
+
+We set custom priors instead of using the default ones:
+
+```{r}
+default_prior(bf(dv ~ 0 + iv,
+                 sigma ~ 0 + iv),
+               data = df,
+               family = student)
+```
+
+Following Kruschke's approach (https://nyu-cdsc.github.io/learningr/assets/kruschke_bayesian_in_R.pdf), we define priors based on the sample mean and SD.
+
+Note that we are using the log value of sample SD. This is because distributional parameters (sigmas) in *brms* are on represented on the log scale.
+
+```{r}
+mean_dv <- mean(df$dv)
+sd_dv <- sd(df$dv)
+
+(prior_mean <- paste0("normal(", round(mean_dv, 2), ", ", round(sd_dv * 100, 2), ")"))
+(prior_sigma <- paste0("normal(", 0, ", ", round(log(sd_dv), 2), ")"))
+(prior_nu <- "exponential(1/29.)")
+```
+
+#### Prior Distributions
+
+##### Prior for Means in Groups 1 and 2
+
+```{r}
+tibble(x = seq(mean_dv - 300*sd_dv, mean_dv + 300*sd_dv, length.out = 100)) %>%
+  ggplot(aes(x)) +
+  stat_function(fun = dnorm, args = list(mean = mean_dv, sd = sd_dv * 100)) +
+  ggtitle(prior_mean) +
+  labs(y = "Density", x = expression(mu))
+```
+
+##### Prior for Standard Deviations (SDs)
+
+```{r}
+tibble(x = seq(0, 5*sd_dv, length.out = 100)) %>%
+  ggplot(aes(x)) +
+  stat_function(fun = dnorm, args = list(mean = 0, sd = sd_dv)) +
+  ggtitle(prior_sigma) +
+  labs(y = "Density", x = expression(sigma))
+```
+
+##### Prior for Degrees of Freedom (ν)
+
+```{r}
+tibble(x = seq(0, 120, length.out = 100)) %>%
+  ggplot(aes(x)) +
+  stat_function(fun = dexp, args = list(rate = 1/29)) +
+  ggtitle(prior_nu) +
+  labs(y = "Density", x = expression(nu))
+```
+
+### Defining and Validating Priors
+
+```{r}
+priors_robust <- c(set_prior(prior_mean, class = "b"),
+                    set_prior(prior_sigma, class = "b", dpar = "sigma"),
+                    set_prior(prior_nu, class = "nu"))
+
+validate_prior(bf(dv ~ 0 + iv,
+                  sigma ~ 0 + iv),
+               data = df,
+               family = student,
+               prior = priors_robust)
+```
+
+### Fitting the Bayesian Model
+
+```{r}
+fit_robust <-
+  brm(bf(dv ~ 0 + iv,
+         sigma ~ 0 + iv),
+      data = df,
+      family = student,
+      prior = priors_robust,
+      sample_prior = "yes")
+```
+
+### Model Results
+
+**Compare these results to classical t-test and known population parameters**
+
+```{r}
+fit_robust
+```
+
+### Hypothesis Testing
+
+#### Difference of Means
+
+```{r}
+hypothesis(fit_robust, "ivg1 - ivg2 = 0")
+```
+
+#### Standard Deviations (SDs)
+
+Note that because SD are represented in *brms* on the log scale, we need to exponentiate them to obtain values on the linear scale.
+
+```{r}
+hypothesis(fit_robust,
+           c("exp(sigma_ivg1) = 0",
+             "exp(sigma_ivg2) = 0"))
+```
+
+#### Difference of Variances
+
+```{r}
+hypothesis(fit_robust, "exp(sigma_ivg1) - exp(sigma_ivg2) = 0")
+```
+
+### Graphical Summary of Results
+
+First, extract posterior samples:
+
+```{r}
+draws <- as_draws_df(fit_robust)
+
+draws %>%
+  glimpse()
+```
+
+Rename columns for better visualization and compute new values:
+
+```{r}
+draws <-
+  draws %>%
+  mutate(`G1 Mean` = b_ivg1,
+         `G2 Mean` = b_ivg2,
+         `G1 Scale` = exp(b_sigma_ivg1),
+         `G2 Scale` = exp(b_sigma_ivg2),
+         Normality = nu) %>%
+  mutate(`Difference of Means` = `G1 Mean` - `G2 Mean`,
+         `Difference of Scales` = `G1 Scale` - `G2 Scale`,
+         `Effect Size` = (`G1 Mean` - `G2 Mean`) / sqrt((`G1 Scale`^2 + `G2 Scale`^2) / 2)) %>%
+  select(.draw, `G1 Mean`:`Effect Size`)
+
+glimpse(draws)
+```
+
+### Plotting Results
+
+```{r}
+library(ggdist)
+
+levels <- c("G1 Mean", "G2 Mean",  "G1 Scale", "Difference of Means", 
+            "G2 Scale", "Difference of Scales", "Normality", "Effect Size")
+
+rope <-
+  tibble(name = factor(c("Difference of Means", "Difference of Scales", "Effect Size"),
+                       levels = levels), 
+         xmin = c(-0.4, -0.4, -.1),
+         xmax = c(0.4, 0.4, .1))
+
+
+draws %>%
+  pivot_longer(-.draw) %>%
+  mutate(name = factor(name, levels = levels)) %>%
+  ggplot() +
+  stat_histinterval(aes(x = value, y = 0),
+                    point_interval = mode_hdi, .width = .95,
+                    normalize = "panels") +
+  geom_rect(data = rope,
+            aes(xmin = xmin, xmax = xmax,
+                ymin = -Inf, ymax = Inf),
+            color = "transparent", fill = "pink", alpha = 0.4) +
+  facet_wrap(~ name, scales = "free", ncol = 2)
+```
+
+
+
+
+## Bayesian Workflow - WAMBS Checklist
+
+### **To be checked before estimating the model**
+
+1. **Do you understand the priors?**
+
+```{r}
+validate_prior(bf(dv ~ 0 + iv,
+                 sigma ~ 0 + iv),
+               data = df,
+               family = student,
+               prior = priors_robust)
+```
+
+### **To be checked after estimation but before inspecting model results**
+
+2. **Does the trace plot exhibit convergence?**
+
+We need to check whether the trace plots exhibit stationarity. All chains should overlap with each other.
+
+```{r}
+library(bayesplot)
+mcmc_trace(fit_robust)
+```
+
+To assess whether chains overlap, we can check the Rhat values (also known as potential scale reduction factors, PSRF). These values represent the ratio of between-chain to within-chain variance. Values should be lower than 1.01.
+
+```{r}
+brms::rhat(fit_robust)
+```
+
+3. **Does convergence remain after doubling the number of iterations?**
+
+To verify this, refit the model with an increased number of iterations: 2000 → 4000.
+
+```{r}
+fit_robust_ref <-
+  brm(bf(dv ~ 0 + iv,
+         sigma ~ 0 + iv),
+      data = df,
+      family = student,
+      prior = priors_robust,
+      sample_prior = "yes",
+      iter = 4000)
+```
+
+Check Rhat values again:
+
+```{r}
+brms::rhat(fit_robust)
+```
+
+We can also examine whether doubling the number of iterations affects parameter estimates.
+
+$$
+\text{bias} = 100 \times \frac{(\text{model with doubled iterations} - \text{initial converged model})}{\text{initial converged model}}
+$$
+
+Below is the computation for some of the model parameters:
+
+```{r}
+round(100*((summary(fit_robust_ref)$fixed - summary(fit_robust)$fixed) / summary(fit_robust)$fixed), 3)[,"Estimate"]
+```
+
+All measures of bias are below 5%, so we likely do not need to be concerned.
+
+4. **Does the posterior distribution histogram contain sufficient information?**
+
+For regression parameters, histograms should be clearly centered with smoothly sloping tails.
+
+```{r}
+mcmc_hist(fit_robust)
+```
+
+If you print the model summary, you will find values for the effective sample size (ESS). These values indicate how much information we have about the posterior distribution of the parameters. Lower ESS values correspond to greater simulation error. Generally, ESS > 1000 is sufficient for stable estimates (Bürkner, 2017).
+
+- **Bulk_ESS**: Diagnoses sampling efficiency in the bulk of the posterior. It reflects the reliability of central tendency indices (mean, median, etc.).
+- **Tail_ESS**: Diagnoses sampling efficiency in the tails of the posterior. It reflects the reliability of statistics dependent on the tails of the distribution (e.g., credible intervals, tail probabilities, etc.).
+
+Since social sciences often focus on both central tendency and tail probabilities, both Bulk_ESS and Tail_ESS should exceed 1000.
+
+```{r}
+fit_robust
+```
+
+5. **Do the chains exhibit a high degree of autocorrelation?**
+
+MCMC is a simulation algorithm in which samples are slightly dependent on previous iterations. However, excessive autocorrelation can reduce sampling efficiency (i.e., decrease ESS).
+
+When analyzing the autocorrelation plot, check whether the autocorrelation values drop sharply with increasing lag for all substantive parameters.
+
+```{r}
+mcmc_acf(fit_robust)
+```
+
+The ratio of ESS to the total number of iterations can help identify problematic parameters:
+
+```{r}
+neff_ratio(fit_robust)
+```
+
+All values above 0.10 are generally considered acceptable.
+
+6. **Do the posterior distributions make substantive sense?**
+
+Examine the values of posterior distributions to ensure they fall within reasonable bounds.
+
+> **Do not let the tail wag the dog.**
+> If statistics contradict common sense, always verify whether the statistics are correct rather than assuming your intuition is wrong.
+
+```{r}
+plot(fit_robust)
+```
+
+Another way to validate the model is by ensuring it can reproduce the sample data. This approach, called posterior predictive checking (PPC), uses sampled posterior values to simulate future results for similar samples. If posterior predictive values deviate significantly from observed values, the model may be misspecified.
+
+The posterior predictive (PP) distributions (thin light blue lines) should resemble the sample distribution (thick blue line).
+
+```{r}
+pp_check(fit_robust)
+```
+
+The statistics of the PP distributions should not be biased relative to the sample statistics:
+
+```{r}
+pp_check(fit_robust, type = "stat", stat="mean")
+```
+
+```{r}
+pp_check(fit_robust, type = "stat", stat="sd")
+```
+
+```{r}
+pp_check(fit_robust, type = "stat", stat="median")
+```
+
+```{r}
+pp_check(fit_robust, type = "stat", stat="mad")
+```
+
+
+
+
