@@ -1,0 +1,94 @@
+---
+title: "Class 6"
+format:
+  revealjs:
+    theme: solarized
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+theme_set(theme_classic())
+```
+
+## Normal model
+
+$$
+y_i \sim Normal(\mu, \sigma)\\
+\mu  \sim Normal(m, s) \\
+\sigma \sim HalfStudent(3, 0, 2.5)\\
+$$
+
+## Simple linear regression
+
+```{r}
+n_draw <- 1000
+
+set.seed(17)
+d <-
+  tibble(x = runif(n = n_draw, min = -10, max = 10)) %>% 
+  mutate(y = 10 + 2 * x + rnorm(n = n(), mean = 0, sd = 2))
+
+curves <-
+
+  tibble(x = seq(from = -7.5, to = 7.5, length.out = 4)) %>%
+  mutate(y_mean = 10 + (2 * x)) %>%
+  mutate(ll = qnorm(.005, mean = y_mean, sd = 2),
+         ul = qnorm(.995, mean = y_mean, sd = 2)) %>%
+  mutate(y = map2(ll, ul, seq, length.out = 100)) %>%
+  unnest(y) %>%
+  mutate(density = map2_dbl(y, y_mean, dnorm, sd = 2)) %>%
+  mutate(x = x - density * 2 / max(density))
+
+library(beyonce)
+bp <- beyonce_palette(41, n = 9, type = "continuous")
+d %>% 
+  ggplot(aes(x = x, y = y)) +
+  geom_vline(xintercept = 0, linewidth = 1/3, linetype = 2, color = bp[9]) +
+  geom_hline(yintercept = 0, linewidth = 1/3, linetype = 2, color = bp[9]) +
+  geom_point(size = 1/3, alpha = 1/3, color = bp[5]) +
+  stat_smooth(method = "lm", se = F, fullrange = T, color = bp[1]) +
+  geom_path(data = curves,
+            aes(group = y_mean),
+            color = bp[2], linewidth = 1) +
+  labs(title = "Normal PDF around Linear Function") +
+  coord_cartesian(xlim = c(-10, 10),
+                  ylim = c(-10, 30)) +
+  theme(strip.background = element_blank(),
+        strip.text = element_blank())
+```
+
+## Simple linear regression
+
+$$
+y_i \sim Normal(\mu_i, \sigma)\\
+\mu_i = \beta_0 + \beta_1 \times x_i \\
+\beta_0 \sim Normal(m_0, s_0) \\
+\beta_1 \sim Normal(m_1, s_1) \\
+\sigma \sim HalfStudent(3, 0, 2.5)\\
+$$
+
+
+## Interactions
+
+![](figures/model1epathdiagram.gif)
+
+## Interactions
+
+$$
+y_i \sim Normal(\mu_i, \sigma)\\
+\mu_i = \beta_0 + \beta_1 \times x_i\\
+\beta_0 = \gamma_0 + \gamma_2 \times w_i\\
+\beta_1 = \gamma_1 + \gamma_3 \times w_i 
+$$
+
+## Interactions
+
+$$
+y_i \sim Normal(\mu_i, \sigma)\\
+\mu_i =  \gamma_0 + \gamma_1x_i + \gamma_2w_i + \gamma_3w_ix_i\\
+\\
+\gamma_0, \gamma_1,\gamma_2,\gamma_3 \sim Normal(m_0, s_0) \\
+\sigma \sim HalfStudent(3, 0, 2.5)\\
+$$
+

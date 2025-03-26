@@ -1,0 +1,348 @@
+---
+title: "Class 6"
+format: html
+---
+
+```{r}
+library(brms)
+library(bayestestR)
+library(tidyverse)
+library(ggridges)
+theme_set(theme_classic())
+```
+
+## Simple Linear Regression
+
+### Loading Data
+We begin by loading the dataset `exp_vaccines.csv` into R. This dataset contains information on individuals' age and their attitudes towards vaccination. The data will be stored in the variable `vacc` and displayed for inspection.
+
+```{r}
+vacc <- read.csv2("data_files/exp_vaccines.csv")
+vacc
+```
+
+### Visualizing the Relationship
+To explore the relationship between age and vaccination attitudes, we create a scatterplot. The plot includes a smooth trend line to help visualize the underlying pattern. The `geom_point()` function plots individual data points, while `geom_smooth()` adds a trend line to show the general relationship.
+
+```{r}
+ggplot(data = vacc,
+       mapping = aes(x = age, y = vaccination)) +
+  geom_point()+
+# geom_jitter()+
+  geom_smooth()
+```
+
+### Standardizing Variables
+To improve interpretability and facilitate Bayesian analysis, we standardize both the predictor (age) and the outcome (vaccination attitude). The `my_scale()` function standardizes variables by subtracting the mean and dividing by the standard deviation. We apply this function to `age` and `vaccination`, creating `zAge` and `zVacc`, respectively.
+
+```{r}
+my_scale <- function(x){
+  (x - mean(x, na.rm=T))/sd(x, na.rm=T)
+}
+
+vacc <- vacc %>%
+  mutate(zAge = my_scale(age),
+         zVacc = my_scale(vaccination))
+```
+
+### Checking Default Priors
+Before specifying our own priors, we examine the default priors assigned by `brms` for our regression model. This helps us understand the model’s default assumptions.
+
+```{r}
+get_prior(
+  formula = zVacc ~ zAge,
+  data = vacc
+)
+```
+
+### Choosing Priors
+We specify informative priors for the intercept and slope based on our domain knowledge. Since variables are standardized, we expect the intercept to be close to 0. We set a weakly informative normal prior for the slope (`zAge`).
+
+```{r}
+priors_simple <- c(
+  set_prior("normal(0, 0.1)",  class="Intercept"),
+  set_prior("normal(0, 1)", class="b", coef = "zAge")
+)
+```
+
+### Validating Priors
+To ensure that the specified priors were correctly assigned, we validate them using `validate_prior()`. This function checks if our prior specifications match the intended parameters.
+
+```{r}
+validate_prior(
+  formula = zVacc ~ zAge,
+  data = vacc,
+  prior = priors_simple
+)
+```
+
+### Fitting the Model
+We fit a Bayesian linear regression model using `brm()`. This model estimates the effect of standardized age (`zAge`) on standardized vaccination attitudes (`zVacc`). We include prior sampling to visualize prior assumptions later.
+
+```{r}
+fit_simple <- brm(
+  formula = zVacc ~ zAge,
+  data = vacc,
+  prior = priors_simple,
+  sample_prior = "yes"
+)
+```
+
+### Examining Model Output
+We print the fitted model summary, which includes posterior estimates, uncertainty intervals, and diagnostics.
+
+```{r}
+fit_simple
+```
+
+### Extracting Posterior Samples
+We extract and inspect the posterior distribution of the model parameters. This allows us to explore the estimated coefficient values.
+
+```{r}
+fit_simple %>%
+  as_draws_df()
+```
+
+### Visualizing Prior and Posterior Distributions
+To understand the impact of Bayesian updating, we plot regression lines based on samples from the prior and posterior distributions. The first plot shows regression lines drawn from prior samples.
+
+```{r}
+fit_simple %>%
+  as_draws_df() %>%
+  sample_n(100) %>%
+  ggplot()+
+  geom_point(aes(zAge, zVacc), data=vacc, alpha=0)+
+  geom_abline(aes(intercept = prior_Intercept, slope=prior_b_zAge), alpha = 0.2)
+```
+
+Next, we add regression lines drawn from posterior samples (in blue), showing how the data influenced our beliefs.
+
+```{r}
+fit_simple %>%
+  as_draws_df() %>%
+  sample_n(100) %>%
+  ggplot()+
+  geom_point(aes(zAge, zVacc), data=vacc, alpha=0.1)+
+  geom_abline(aes(intercept = prior_Intercept, slope=prior_b_zAge), alpha = 0.2)+
+  geom_abline(aes(intercept = Intercept, slope=b_zAge), alpha = 0.3, colour="blue")
+```
+
+Finally, we overlay a red line to indicate the central tendency of the posterior distribution.
+
+```{r}
+fit_simple %>%
+  as_draws_df() %>%
+  sample_n(100) %>%
+  ggplot()+
+  geom_point(aes(zAge, zVacc), data=vacc, alpha=0.1)+
+  geom_abline(aes(intercept = prior_Intercept, slope=prior_b_zAge), alpha = 0.2)+
+  geom_abline(aes(intercept = Intercept, slope=b_zAge), alpha = 0.3, colour="blue")+
+  geom_abline(aes(intercept = 0, slope=0.17), colour="red", linewidth=1)
+```
+
+### Evaluating the Effect’s Direction and Significance
+To assess whether the effect is consistently in one direction, we compute the probability that the slope is positive or negative.
+
+```{r}
+p_direction(fit_simple)
+```
+
+We visualize this probability using a plot.
+
+```{r}
+p_direction(fit_simple) %>%
+  plot()
+```
+
+Next, we conduct an equivalence test to determine whether the effect is practically significant by assessing its overlap with a region of practical equivalence (ROPE).
+
+```{r}
+equivalence_test(fit_simple)
+```
+
+The results of the equivalence test can be visualized as follows:
+
+```{r}
+equivalence_test(fit_simple) %>%
+  plot()
+```
+
+### Posterior Predictions
+We generate predictions from the model, both with and without residual error, to better understand uncertainty in individual predictions.
+
+```{r}
+conditional_effects(fit_simple, "zAge") %>%
+  plot(points=TRUE)
+```
+
+Including residual error in predictions provides a more realistic range of expected values.
+
+```{r}
+conditional_effects(fit_simple, "zAge", method = "posterior_predict") %>%
+  plot(points=T)
+```
+
+This document continues with an exploration of interaction effects, where we examine how gender moderates the relationship between age and vaccination attitudes. The same structured approach will be used: visualizing interactions, setting priors, fitting a Bayesian model, and interpreting results.
+
+
+### Making Predictions at Specific Values of the Predictor Variable
+To better understand how the model predicts vaccination attitudes for individuals of different ages, we generate predictions at specific values of `zAge`.
+
+#### Defining a Grid of Predictor Variables
+We create a tibble containing specific values of `zAge` corresponding to real ages (e.g., -1 corresponds to 29 years old, 0 to 44 years old, and 1 to 60 years old). This allows us to estimate vaccination attitudes at representative ages.
+
+```{r}
+new_data_vacc <- tibble(
+  zAge = c(-1, 0, 1) ## corresponding to 29, 44, 60
+)
+```
+
+#### Extracting Posterior Predictive Distributions and Visualizing Results
+We use `posterior_predict()` to generate posterior predictions for the specified ages. The results are visualized using density ridge plots to illustrate uncertainty in predicted vaccination attitudes. The red vertical line highlights a reference point of interest.
+
+```{r}
+library(ggridges)
+posterior_predict(object = fit_simple, newdata = new_data_vacc) %>% 
+  as_tibble() %>% 
+  set_names(c("29", "44", "66")) %>% 
+  pivot_longer(everything(), names_to = "age", values_to = "predicted") %>% 
+  ggplot(aes(x=predicted, y=age))+
+  geom_density_ridges()+
+  geom_vline(xintercept=1, colour="red", linetype=2)
+```
+
+#### Estimating Probability of Strongly Positive Attitudes
+
+We calculate the probability that individuals in different age groups will exhibit extremely positive attitudes towards vaccination (defined as `predicted > 1`). This provides insight into how likely different age groups are to strongly support vaccination.
+
+```{r}
+posterior_predict(object = fit_simple, newdata = new_data_vacc) %>% 
+  as_tibble() %>% 
+  set_names(c("29", "44", "66")) %>% 
+  pivot_longer(everything(), names_to = "age", values_to = "predicted") %>% 
+  mutate(highVacc = as.numeric(predicted > 1)) %>% 
+  group_by(age) %>% 
+  summarise(`extremely positive attitudes towards vaccines` = sum(highVacc)/n())
+```
+
+
+## Interactions
+
+### Visualizing Interaction: Effect of Age on Attitudes Toward Vaccines by Gender
+
+In this step, we explore whether the effect of age on vaccination attitudes differs between genders. We use `ggplot2` to visualize the relationship separately for each gender.
+
+```{r}
+ggplot(data = vacc,
+       mapping = aes(x = age, y = vaccination)) +
+  geom_point()+
+# geom_jitter()+
+  geom_smooth(aes(group=gender, colour=gender))
+```
+
+### Checking Default Prior Distributions
+
+Before defining our own priors, we check the default priors that `brms` would assign to the model parameters.
+
+```{r}
+get_prior(
+  formula = zVacc ~ zAge + gender + zAge:gender,
+  data = vacc
+)
+```
+
+### Setting Priors for Different Regression Coefficients
+
+We define informative priors for the regression coefficients. The prior for `zAge` assumes a standard deviation of 1, reflecting uncertainty about its effect. The gender coefficient is assigned a wider prior (SD = 2) to allow for potentially larger effects, and the interaction term is given a tighter prior (SD = 0.5) to reflect more modest expected interactions.
+
+```{r}
+priors_interaction <- c(
+  set_prior("normal(0, 1)", class="b", coef = "zAge"),
+  set_prior("normal(0, 2)", class="b", coef = "genderwoman"),
+  set_prior("normal(0, 0.5)", class="b", coef = "zAge:genderwoman")
+)
+```
+
+### Validating the Assigned Priors
+
+We ensure that the priors were correctly assigned by checking them with `validate_prior()`.
+
+```{r}
+validate_prior(
+  formula = zVacc ~ zAge + gender + zAge:gender,
+  data = vacc,
+  prior = priors_interaction
+)
+```
+
+### Setting the Same Prior for All Regression Coefficients
+
+Alternatively, we can set a single prior distribution for all regression coefficients.
+
+```{r}
+priors_interaction2 <- c(
+  set_prior("normal(0, 1)", class="b")
+)
+```
+
+### Validating the Alternative Priors
+
+We check whether this alternative prior setup is correctly applied.
+
+```{r}
+validate_prior(
+  formula = zVacc ~ zAge + gender + zAge:gender,
+  data = vacc,
+  prior = priors_interaction2
+)
+```
+
+### Fitting the Interaction Model
+
+We fit a Bayesian regression model that includes an interaction term between age and gender, using the previously defined priors.
+
+```{r}
+fit_interaction <- brm(
+  formula = zVacc ~ zAge + gender + zAge:gender,
+  data = vacc,
+  prior = priors_interaction,
+  sample_prior = "yes"
+)
+```
+
+### Examining the Model Output
+
+We print the summary of the fitted model, which provides estimates for the regression coefficients along with credible intervals.
+
+```{r}
+fit_interaction
+```
+
+### Visualizing the Interaction Effect
+
+We use `conditional_effects()` to visualize how the effect of `zAge` on `zVacc` varies by gender. The `spaghetti = TRUE` option overlays multiple draws from the posterior distribution to illustrate uncertainty.
+
+```{r}
+conditional_effects(fit_interaction, "zAge:gender", spaghetti = TRUE, ndraws = 200)
+```
+
+### Estimating Simple Slopes
+
+We test the simple slopes of `zAge` at different levels of gender to determine how the effect of age varies between men and women.
+
+```{r}
+hypothesis(fit_interaction, 
+           c("zAge + zAge:genderwoman * 0 = 0",
+             "zAge + zAge:genderwoman * 1 = 0"))
+```
+
+### Estimating Simple Slopes Using `emmeans`
+
+The `emmeans` package provides an alternative approach for estimating and comparing slopes across gender groups.
+
+```{r}
+library(emmeans)
+emtrends(fit_interaction, ~gender, var = "zAge") 
+```
+
+
