@@ -1,0 +1,70 @@
+---
+title: "Homework assignment 5"
+format: html
+---
+
+## Load required libraries and data
+
+```{r}
+library(tidyverse)
+library(brms)
+```
+
+```{r}
+hs_dep <- read_csv2("data_files/hate_depres.csv")
+hs_dep <- hs_dep %>% 
+  mutate(familySup = ifelse(famAcc == 0, "no", "yes"))
+hs_dep
+```
+
+The dataset contains data from N = 3,827 gay and lesbian participants.
+
+hs – Measures how often participants encountered hate speech against gay or lesbian individuals (1 = very rarely, 7 = very often).
+depres – Measures the intensity of depression symptoms using the PHQ-8 scale (1 = low intensity, 5 = high intensity).
+famAcc – Indicates the number of family members who accept the participant’s sexual orientation (0 = no one, 4 = both parents and siblings).
+familySup – A categorical variable indicating whether the participant has at least one family member who accepts their sexual orientation ("yes" or "no").
+
+<!-- -->
+
+a)  Standardize continuous variables (e.g., hs and depres).
+
+```{r}
+
+```
+
+
+b)  Fit a model to examine whether the effect of hate speech on depression symptoms depends on whether the participant has family support.
+
+First, define appropriate priors for your model.
+
+```{r}
+
+```
+
+Then, fit the model using the brm() function.
+
+```{r}
+
+```
+
+Check for convergence issues using the WAMBS (When to Worry and How to Avoid the Misuse of Bayesian Statistics) checklist. Report whether it is safe to interpret the results.
+
+```{r}
+
+```
+
+
+d)  Visualize the interaction between hate speech and family support.
+
+```{r}
+
+```
+
+
+e)  Use hypothesis() or emtrends() to estimate and compare the effect of standardized hate speech (z_hs) for participants with and without family support.
+
+```{r}
+
+```
+
+f)  Interpret the results
