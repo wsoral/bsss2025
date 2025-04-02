@@ -239,6 +239,30 @@ ggplot(data = vacc,
 # geom_jitter()+
   geom_smooth(aes(group=gender, colour=gender))
 ```
+### Changing default contrasts for categorical predicors
+
+When working with interactions involving categorical predictors, it is important to carefully consider the contrast coding used to represent the levels of categorical variables.
+
+By default, R applies treatment (dummy) coding, where one level serves as the reference, and all other levels are compared to it. The reference level is represented by 0, while each other level is represented by 1. This type of coding is preferred when there is only one predictor or multiple predictors without interactions. However, in cases involving interactions with categorical variables, treatment coding can be misleading.
+
+```{r}
+contrasts(as.factor(vacc$gender))
+```
+
+A better approach is to use an alternative coding scheme, such as sum coding:
+
+```{r}
+contrasts(as.factor(vacc$gender))
+```
+
+To set sum coding globally for the entire session, we use the options function to define contrasts. The code below specifies the contrasts parameter:
+The first value applies to unordered categorical variables, where we use sum coding.
+The second value applies to ordered categorical variables. By default, it is set to polynomial effects coding, which we can leave unchanged.
+
+```{r}
+options(contrasts=c("contr.sum", "contr.poly"))
+```
+
 
 ### Checking Default Prior Distributions
 
@@ -258,8 +282,8 @@ We define informative priors for the regression coefficients. The prior for `zAg
 ```{r}
 priors_interaction <- c(
   set_prior("normal(0, 1)", class="b", coef = "zAge"),
-  set_prior("normal(0, 2)", class="b", coef = "genderwoman"),
-  set_prior("normal(0, 0.5)", class="b", coef = "zAge:genderwoman")
+  set_prior("normal(0, 2)", class="b", coef = "gender1"),
+  set_prior("normal(0, 0.5)", class="b", coef = "zAge:gender1")
 )
 ```
 
@@ -332,8 +356,8 @@ We test the simple slopes of `zAge` at different levels of gender to determine h
 
 ```{r}
 hypothesis(fit_interaction, 
-           c("zAge + zAge:genderwoman * 0 = 0",
-             "zAge + zAge:genderwoman * 1 = 0"))
+           c("woman" = "zAge + zAge:gender1 * -1 = 0",
+             "man" = "zAge + zAge:gender1 * 1 = 0")) 
 ```
 
 ### Estimating Simple Slopes Using `emmeans`

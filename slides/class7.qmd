@@ -1,0 +1,167 @@
+---
+title: "Class 7"
+format: revealjs
+---
+
+## Model comparison - Bayes factor {.smaller}
+
+-   Bayes Factor (BF) indicates the relative strength of evidence in the data for two competing theories/models/hypotheses
+    -   Example: Alternative hypothesis ($H_1$) vs. Null hypothesis ($H_0$)
+-   $BF$ ranges from 0 to $+\infty$
+-   $BF_{10}$ to indicate how much more likely the alternative hypothesis compared to the null hypothesis
+-   Values $> 1$ support the alternative hypothesis, whereas values $< 1$ support the null hypothesis
+-   $BF_{01}$ to indicate how much more likely the null hypothesis compared to the alternative hypothesis
+-   $BF_{01} = 1/BF_{10}$
+
+## Model comparison - Bayes factor {.smaller}
+
+|       | BF  |       | Interpretation                 |
+|-------|-----|-------|--------------------------------|
+| 100   | \<  |       | Extreme evidence for $H_1$     |
+| 30    | \-  | 100   | Very strong evidence for $H_1$ |
+| 10    | \-  | 30    | Strong evidence for $H_1$      |
+| 3     | \-  | 10    | Substantial evidence for $H_1$ |
+| 1     | \-  | 3     | Anecdotal evidence for $H_1$   |
+|       | 1   |       | No evidence                    |
+| 1/3   | \-  | 1     | Anecdotal evidence for $H_0$   |
+| 1/10  | \-  | 1/3   | Substantial evidence for $H_0$ |
+| 1/30  | \-  | 1/10  | Strong evidence for $H_0$      |
+| 1/100 | \-  | 1/30  | Very strong evidence for $H_0$ |
+|       | \>  | 1/100 | Extreme evidence for $H_0$     |
+
+## Overfitting
+
+```{r}
+library(rcartocolor)
+library(tidyverse)
+library(patchwork)
+d <- 
+  tibble(species = c("afarensis", "africanus", "habilis", "boisei", "rudolfensis", "ergaster", "sapiens"), 
+         brain   = c(438, 452, 612, 521, 752, 871, 1350), 
+         mass    = c(37.0, 35.5, 34.5, 41.5, 55.5, 61.0, 53.5))
+p <-
+  d %>% 
+  ggplot(aes(x = mass, y = brain)) +
+  geom_point(color = carto_pal(7, "BurgYl")[7]) +
+  scale_x_continuous("body mass (kg)", limits = c(33, 62), expand = c(0, 0)) +
+  ylab("brain volume (cc)") +
+  coord_cartesian(ylim = c(300, 1500)) +
+  theme_classic() +
+  theme(text = element_text(family = "Courier"),
+        panel.background = element_rect(fill = alpha(carto_pal(7, "BurgYl")[3], 1/4)))
+
+# linear
+p1 <- 
+  p +
+  stat_smooth(method = "lm", fullrange = TRUE, level = .89,  # note our rare use of 89% intervals
+              color = carto_pal(7, "BurgYl")[6], fill = carto_pal(7, "BurgYl")[6], 
+              linewidth = 1/2, alpha = 1/3,
+              formula = y ~ x) +
+  ggtitle(NULL, subtitle = expression(italic(R)^2==".49"))
+  
+# quadratic
+p2 <-
+  p + 
+  stat_smooth(method = "lm", fullrange = TRUE, level = .89,
+              color = carto_pal(7, "BurgYl")[6], fill = carto_pal(7, "BurgYl")[6], 
+              linewidth = 1/2, alpha = 1/3,              
+              formula = y ~ poly(x, 2)) +
+  ggtitle(NULL, subtitle = expression(italic(R)^2==".54"))
+
+# cubic
+p3 <-
+  p + 
+  stat_smooth(method = "lm", fullrange = TRUE, level = .89,
+              color = carto_pal(7, "BurgYl")[6], fill = carto_pal(7, "BurgYl")[6], 
+              linewidth = 1/2, alpha = 1/3,              
+              formula = y ~ poly(x, 3)) +
+  ggtitle(NULL, subtitle = expression(italic(R)^2==".68"))
+
+# fourth-order polynomial
+p4 <-
+  p + 
+  stat_smooth(method = "lm", fullrange = TRUE, level = .89,
+              color = carto_pal(7, "BurgYl")[6], fill = carto_pal(7, "BurgYl")[6], 
+              linewidth = 1/2, alpha = 1/3,              
+              formula = y ~ poly(x, 4)) +
+  ggtitle(NULL, subtitle = expression(italic(R)^2==".81"))
+
+# fifth-order polynomial
+p5 <-
+  p + 
+  stat_smooth(method = "lm", fullrange = TRUE, level = .89,
+              color = carto_pal(7, "BurgYl")[6], fill = carto_pal(7, "BurgYl")[6], 
+              linewidth = 1/2, alpha = 1/3,              
+              formula = y ~ poly(x, 5)) +
+  # we're adjusting the y-axis range for this plot (and the next)
+  coord_cartesian(ylim = c(150, 1900)) +
+  ggtitle(NULL, subtitle = expression(italic(R)^2==".99"))
+  
+# sixth-order polynomial
+p6 <-
+  p + 
+  # mark off 0 on the y-axis
+  geom_hline(yintercept = 0, color = carto_pal(7, "BurgYl")[2], linetype = 2) + 
+  stat_smooth(method = "lm", fullrange = TRUE, level = .89,
+              color = carto_pal(7, "BurgYl")[6], fill = carto_pal(7, "BurgYl")[6], 
+              linewidth = 1/2, alpha = 1/3,
+              formula = y ~ poly(x, 6)) +
+  coord_cartesian(ylim = c(-300, 1500)) +
+  ggtitle(NULL, subtitle = expression(italic(R)^2==1))
+
+(p1 + p2) / (p3 + p4) / (p5 + p6)
+```
+
+## Overfitting
+
+```{r}
+dev_tibble <- read_csv2("figures/dev_tibble.csv")
+# this intermediary tibble will make `geom_text()` easier
+dev_text <-
+  dev_tibble %>% 
+  filter(n_par > 1.5, 
+         n_par < 2.5) %>% 
+  mutate(n_par = ifelse(sample == "in", n_par - .25, n_par + .33))
+  
+# the plot
+dev_tibble %>% 
+  ggplot(aes(x = n_par, y = mean,
+             ymin = mean - sd, ymax = mean + sd,
+             group = sample, color = sample, fill  = sample)) +
+  geom_pointrange(shape = 21) +
+  geom_text(data = dev_text,
+            aes(label = sample),
+            family = "Courier") +
+  scale_color_manual(values = c(carto_pal(7, "BurgYl")[7], carto_pal(7, "BurgYl")[5])) +
+  scale_fill_manual(values  = c(carto_pal(7, "BurgYl")[5], carto_pal(7, "BurgYl")[7])) +
+  labs(x = "number of parameters",
+       y = "deviance") +
+  theme_classic() +
+  theme(text = element_text(family = "Courier"),
+        legend.position = "none",
+        panel.background = element_rect(fill = alpha(carto_pal(7, "BurgYl")[3], 1/4)),
+        strip.background = element_rect(fill = alpha(carto_pal(7, "BurgYl")[1], 1/4), color = "white"))
+```
+
+## Information criteria
+
+-   Information criteria account for model complexity, and provide a measure of out-of-sample predictive accuracy.
+-   Leave-one-out information criterion (LOOIC) can efficiently approximate leave-one-out cross-validation
+
+## Leave-one-out cross validation
+
+```{r}
+set.seed(1234)
+y = rnorm(6)
+tibble(x = rep(1:6, 6),
+       y = rep(y, 6),
+       step = rep(1:6, each = 6)) %>% 
+  mutate(leave_one = ifelse(x == step, "test", "train")) %>% 
+  ggplot(aes(x, y))+
+  facet_wrap(~step)+
+  geom_point(aes(colour=leave_one))+
+  scale_colour_manual(values = c("gray","black"))+
+  labs(colour="")+
+  theme_classic()
+  
+```
